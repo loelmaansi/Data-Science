@@ -1,6 +1,6 @@
 # Data-Science
 
-# 👋 Welcome to My Data Science Portfolio
+# 👋 Welcome to My Data Science Repository
 
 Hi there! I'm passionate about exploring data and transforming it into actionable insights. This repository highlights some of the projects I’ve worked on during my data science journey, covering core areas like web scraping, natural language processing, and predictive modeling.
 
