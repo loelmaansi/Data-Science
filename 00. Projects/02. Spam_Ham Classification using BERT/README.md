@@ -1,1 +1,1 @@
-
+👉 **To view the full notebook with all outputs and interactive 3D plots, [open Spam/Ham Classification using BERT in Google Colab](https://colab.research.google.com/drive/1KdE36ZLgkoywHjc4BA8Ffvy3rnK2hqEP?usp=sharing).**
