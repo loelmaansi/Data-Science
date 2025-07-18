@@ -15,7 +15,7 @@ Hi there! I'm passionate about exploring data and transforming it into actionabl
 - **🏠 House Price Prediction**  
   Regression modeling using the Boston housing dataset, with emphasis on feature engineering and model evaluation.
 
-- **📊 Customer Analysis Dashboard
+- **📊 Customer Analysis Dashboard**
 
 An interactive Tableau dashboard for in-depth customer and sales analysis. Covers customer demographics, geography, time periods, product categories, and discount trends to uncover actionable insights.
 
