@@ -19,7 +19,16 @@ Hi there! I'm passionate about exploring data and transforming it into actionabl
   An interactive Tableau dashboard for in-depth customer and sales analysis. Covers customer demographics, geography, time periods, product categories, and discount trends to uncover         actionable insights.
 
 - **05. 🤖 AI Code Reviewer**  
-  Streamlit app that reviews Python code using GPT models. Detects bugs, provides a concise bug report, and returns the fixed version of the code instantly.  
+  Streamlit app that reviews Python code using GPT models. Detects bugs, provides a concise bug report, and returns the fixed version of the code instantly.
+
+- **06. 🎬 Cine Shazam – Movie Finder from Audio**  
+  A Streamlit application that works like “Shazam for Movies.”  
+  It records audio from a movie/TV scene, transcribes it using Whisper, and identifies the movie title using a custom RAG pipeline built with LangChain, ChromaDB, and MiniLM embeddings.
+
+-  07. **🤖 Real-Time Multi-Agent Customer Support System**  
+  A LangGraph-powered multi-agent chatbot with intelligent triaging and specialized Billing/Technical agents.  
+  Supports real-time API calls, automated routing, simulated web searches, escalation handling, and a real-time chat UI built with Streamlit.
+
 
 ---
 
