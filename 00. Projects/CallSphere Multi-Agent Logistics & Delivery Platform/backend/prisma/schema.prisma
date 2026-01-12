@@ -1,0 +1,422 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  customer
+  driver
+  dispatcher
+  manager
+  admin
+}
+
+enum ShipmentStatus {
+  pending
+  in_transit
+  out_for_delivery
+  delivered
+  failed
+  returned
+}
+
+enum ServiceLevel {
+  standard
+  express
+  overnight
+  same_day
+}
+
+enum ScanType {
+  picked_up
+  in_transit
+  out_for_delivery
+  delivered
+  failed
+  returned
+}
+
+enum RouteStopStatus {
+  pending
+  in_progress
+  completed
+  failed
+  skipped
+}
+
+enum IssueType {
+  damaged
+  missing
+  wrong_address
+  missed_delivery
+  delay
+  other
+}
+
+enum IssueStatus {
+  open
+  in_progress
+  resolved
+  closed
+}
+
+enum EscalationEventType {
+  triggered
+  advanced
+  acknowledged
+}
+
+enum EscalationContactType {
+  email
+  sms
+  phone
+  push
+}
+
+enum AgentChannel {
+  chat
+  voice
+}
+
+enum AgentSessionStatus {
+  active
+  completed
+  error
+}
+
+enum MetricAggregationType {
+  ratio
+  count
+  avg
+}
+
+enum MetricDimension {
+  global
+  region
+  route
+  driver
+}
+
+enum DashboardOwnerType {
+  role
+  user
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  role          UserRole  @default(customer)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  shipments            Shipment[]
+  reportedIssues       DeliveryIssue[] @relation("ReportedBy")
+  escalationContacts   EscalationContact[]
+  acknowledgments      Acknowledgment[]
+  agentSessions        AgentSession[]
+  dashboardConfigs     DashboardConfig[]
+  driver               Driver?
+
+  @@index([email])
+  @@index([role])
+}
+
+model Shipment {
+  id                  String          @id @default(uuid())
+  trackingNumber      String          @unique
+  orderId             String?
+  customerId          String
+  fromAddress         String          @db.Text()
+  toAddress           String          @db.Text()
+  currentStatus       ShipmentStatus  @default(pending)
+  serviceLevel        ServiceLevel    @default(standard)
+  promisedDeliveryDate DateTime
+  lastScanAt          DateTime?
+  lastScanLocation    String?
+  isVip               Boolean         @default(false)
+  slaRiskScore        Float           @default(0)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  // Relations
+  customer            User            @relation(fields: [customerId], references: [id])
+  scans               ShipmentScan[]
+  routeStops          RouteStop[]
+  issues              DeliveryIssue[]
+  escalationLogs      EscalationLog[]
+  acknowledgments     Acknowledgment[]
+  agentSessions       AgentSession[]
+
+  @@index([trackingNumber])
+  @@index([customerId])
+  @@index([currentStatus])
+  @@index([promisedDeliveryDate])
+  @@index([slaRiskScore])
+}
+
+model ShipmentScan {
+  id          String    @id @default(uuid())
+  shipmentId  String
+  scanType    ScanType
+  location    String
+  timestamp   DateTime  @default(now())
+  notes       String?   @db.Text()
+
+  // Relations
+  shipment    Shipment  @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId])
+  @@index([timestamp])
+}
+
+model Vehicle {
+  id              String    @id @default(uuid())
+  vehicleCode     String    @unique
+  capacityVolume  Float
+  capacityWeight  Float
+  homeBase        String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  drivers         Driver[]
+  routes          Route[]
+
+  @@index([vehicleCode])
+}
+
+model Driver {
+  id                String    @id @default(uuid())
+  driverCode        String    @unique
+  userId            String    @unique
+  assignedVehicleId String?
+  homeBase          String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  user              User      @relation(fields: [userId], references: [id])
+  vehicle           Vehicle?  @relation(fields: [assignedVehicleId], references: [id])
+  routes            Route[]
+
+  @@index([driverCode])
+  @@index([userId])
+}
+
+model Route {
+  id          String    @id @default(uuid())
+  routeCode   String    @unique
+  date        DateTime  @db.Date
+  driverId    String
+  vehicleId   String?
+  region      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  driver      Driver    @relation(fields: [driverId], references: [id])
+  vehicle     Vehicle?  @relation(fields: [vehicleId], references: [id])
+  stops       RouteStop[]
+
+  @@index([routeCode])
+  @@index([date])
+  @@index([driverId])
+  @@index([region])
+}
+
+model RouteStop {
+  id              String          @id @default(uuid())
+  routeId         String
+  shipmentId      String
+  sequenceNumber  Int
+  plannedEta      DateTime
+  actualArrival   DateTime?
+  status          RouteStopStatus @default(pending)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  route           Route           @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  shipment        Shipment        @relation(fields: [shipmentId], references: [id])
+
+  @@index([routeId])
+  @@index([shipmentId])
+  @@index([sequenceNumber])
+}
+
+model DeliveryIssue {
+  id                String        @id @default(uuid())
+  shipmentId        String
+  reportedByUserId  String
+  issueType         IssueType
+  description       String        @db.Text()
+  aiSeverityScore   Float         @default(0)
+  status            IssueStatus   @default(open)
+  resolutionNotes   String?       @db.Text()
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  shipment          Shipment      @relation(fields: [shipmentId], references: [id])
+  reportedBy        User          @relation("ReportedBy", fields: [reportedByUserId], references: [id])
+  escalationLogs    EscalationLog[]
+  acknowledgments   Acknowledgment[]
+  agentSessions     AgentSession[]
+
+  @@index([shipmentId])
+  @@index([reportedByUserId])
+  @@index([status])
+  @@index([aiSeverityScore])
+}
+
+model EscalationContact {
+  id              String                @id @default(uuid())
+  userId          String
+  position        String
+  contactType     EscalationContactType
+  timeoutSeconds  Int
+  isActive        Boolean               @default(true)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  // Relations
+  user            User                  @relation(fields: [userId], references: [id])
+  escalationLogs  EscalationLog[]
+
+  @@index([userId])
+  @@index([isActive])
+}
+
+model EscalationLog {
+  id                String                @id @default(uuid())
+  shipmentId        String
+  deliveryIssueId   String?
+  contactId         String
+  attemptNumber     Int
+  eventType         EscalationEventType
+  payload           Json
+  ackReceived       Boolean               @default(false)
+  ackMethod         String?
+  acknowledgedAt    DateTime?
+  createdAt         DateTime              @default(now())
+
+  // Relations
+  shipment          Shipment              @relation(fields: [shipmentId], references: [id])
+  deliveryIssue     DeliveryIssue?        @relation(fields: [deliveryIssueId], references: [id])
+  contact           EscalationContact     @relation(fields: [contactId], references: [id])
+
+  @@index([shipmentId])
+  @@index([deliveryIssueId])
+  @@index([contactId])
+  @@index([eventType])
+  @@index([ackReceived])
+}
+
+model Acknowledgment {
+  id                String        @id @default(uuid())
+  shipmentId        String
+  deliveryIssueId   String?
+  userId            String
+  method            String
+  notes             String?       @db.Text()
+  createdAt         DateTime      @default(now())
+
+  // Relations
+  shipment          Shipment      @relation(fields: [shipmentId], references: [id])
+  deliveryIssue     DeliveryIssue? @relation(fields: [deliveryIssueId], references: [id])
+  user              User          @relation(fields: [userId], references: [id])
+
+  @@index([shipmentId])
+  @@index([deliveryIssueId])
+  @@index([userId])
+}
+
+model AgentSession {
+  id                String              @id @default(uuid())
+  userId            String?
+  role              String
+  channel           AgentChannel
+  linkedShipmentId  String?
+  deliveryIssueId   String?
+  openAiSessionId   String
+  startedAt         DateTime            @default(now())
+  endedAt           DateTime?
+  status            AgentSessionStatus  @default(active)
+  lastAgentName     String?
+  transcript        Json?
+  outcome           Json?
+
+  // Relations
+  user              User?               @relation(fields: [userId], references: [id])
+  shipment          Shipment?           @relation(fields: [linkedShipmentId], references: [id])
+  deliveryIssue     DeliveryIssue?      @relation(fields: [deliveryIssueId], references: [id])
+
+  @@index([userId])
+  @@index([openAiSessionId])
+  @@index([status])
+  @@index([linkedShipmentId])
+}
+
+model MetricDefinition {
+  id                    String                  @id @default(uuid())
+  key                   String                  @unique
+  name                  String
+  description           String                  @db.Text()
+  aggregationType       MetricAggregationType
+  dimension             String
+  targetValue           Float
+  warningThreshold      Float?
+  criticalThreshold     Float?
+  ownerRole             UserRole                @default(admin)
+  isVisibleOnDashboard  Boolean                 @default(true)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+
+  // Relations
+  snapshots             MetricSnapshot[]
+
+  @@index([key])
+  @@index([ownerRole])
+}
+
+model MetricSnapshot {
+  id              String          @id @default(uuid())
+  metricId        String
+  value           Float
+  timeRangeStart  DateTime
+  timeRangeEnd    DateTime
+  computedAt      DateTime        @default(now())
+  breakdown       Json?
+
+  // Relations
+  metric          MetricDefinition @relation(fields: [metricId], references: [id], onDelete: Cascade)
+
+  @@index([metricId])
+  @@index([timeRangeStart])
+  @@index([computedAt])
+}
+
+model DashboardConfig {
+  id          String              @id @default(uuid())
+  ownerType   DashboardOwnerType
+  ownerRole   UserRole?
+  ownerUserId String?
+  layout      Json
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  // Relations
+  owner       User?               @relation(fields: [ownerUserId], references: [id])
+
+  @@index([ownerType, ownerRole])
+  @@index([ownerUserId])
+}
+
