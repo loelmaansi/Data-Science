@@ -1,0 +1,10 @@
+streamlit
+pandas
+langchain
+langchain-community
+langchain-openai
+langchain-huggingface
+langchain-classic
+faiss-cpu
+rank_bm25
+sentence-transformers
