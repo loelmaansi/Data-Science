@@ -1,24 +1,19 @@
 # Walmart-RAG-Assistant
-# 🛒 Walmart Sales RAG Assistant
+# 🛒 Walmart Sales Pandas Agent Assistant
 
-A retrieval-augmented generation (RAG) system that answers natural-language questions about Walmart weekly sales data. Combines hybrid retrieval (BM25 + FAISS) with an LLM-based generator, wrapped in a Streamlit chat interface.
+A chat assistant that answers natural-language questions about Walmart weekly sales data by running a pandas dataframe agent directly on the cleaned dataset. Wrapped in a Streamlit chat interface.
 
 ## 📌 Project Overview
 
-- **01. 📄 Document Construction**
-  Converts each row of tabular sales data (store, date, holiday flag, temperature, fuel price, CPI, unemployment) into a natural-language `Document`, so the retriever can match on meaning rather than raw column values.
+- **01. 🧹 Data Processing**
+  Cleans and feature-engineers the raw Walmart sales CSV: renames columns, parses dates, derives `month`/`year`/`season`, buckets temperature/fuel price/CPI/unemployment into levels, and adds weekday vs. weekend flags. The result is cached to `data/walmart_processed.csv`.
 
-- **02. 🔎 Hybrid Retrieval**
-  Combines a `BM25Retriever` with a FAISS vector retriever (MiniLM embeddings) via an `EnsembleRetriever`, weighted 0.4/0.6, to balance keyword and semantic matching.
+- **02. 🐼 Pandas Dataframe Agent**
+  A `create_pandas_dataframe_agent` (LangChain, tool-calling, `gpt-4o-mini`, temperature 0, `return_intermediate_steps=True`) runs directly on the processed dataframe to answer questions. The notebook (`walmart_data.py`) also wires the same agent into a single-node `LangGraph` `StateGraph`.
 
-- **03. 🧠 Generation**
-  Uses `ChatOpenAI` (gpt-4o-mini, temperature 0) with a context-constrained prompt template, so answers are grounded only in retrieved documents.
-
-- **04. 📈 Evaluation**
-  A small ground-truth question set is scored using sentence-embedding cosine similarity between expected and generated answers (avg. 0.72, range 0.61–0.81) — a sanity check rather than a full benchmark.
-
-- **05. 💬 Streamlit App**
-  A cached, chat-style interface (`app.py`) that persists the FAISS index to disk after the first build, so the app loads instantly on repeat runs.
-
----
-Feel free to explore the notebook and app for the full pipeline, code, and evaluation details.
+- **03. 💬 Streamlit Chat App**
+  `streamlit_app.py` wraps the same data pipeline and agent in a chat UI:
+  - Captures any matplotlib figures produced by the agent's pandas code during a tool call and renders them inline in the chat
+  - Prepends a short transcript of recent turns to each new question so follow-ups (e.g. "what about for store 5?") resolve correctly, since the agent itself is stateless per call
+  - Includes a dedupe safeguard that collapses an answer if the agent restates it twice
+  - Sidebar shows example questions, dataset metrics (row count, store count, date range), a toggle to show the generated pandas code, and a clear-chat button
