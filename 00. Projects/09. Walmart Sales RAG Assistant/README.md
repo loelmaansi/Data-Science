@@ -1,5 +1,5 @@
 # Walmart-RAG-Assistant
-# 🛒 Walmart Sales Pandas Agent Assistant
+# 🛒 Walmart Sales Pandas Agent
 
 A chat assistant that answers natural-language questions about Walmart weekly sales data by running a pandas dataframe agent directly on the cleaned dataset. Wrapped in a Streamlit chat interface.
 
